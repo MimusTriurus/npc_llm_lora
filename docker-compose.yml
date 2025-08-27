@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  trainer:
+    build: .
+    container_name: qwen-trainer
+    tty: true
+    stdin_open: true
+    shm_size: "16gb"
+
+    # Доступ к GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Переменные окружения для Hugging Face и CUDA
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_HOME=/root/.cache/huggingface
+      - HF_HUB_DISABLE_SYMLINKS_WARNING=1
+      - CUDA_VISIBLE_DEVICES=0   # если несколько карт — можно указать id
+
+    volumes:
+      - ./data:/workspace/data                              # датасет
+      - ./models:/root/.cache/huggingface/hub               # кэш HF моделей
+      - ./:/workspace                                       # код + скрипты
+      - ./outputs:/workspace/outputs                        # сохранение чекпоинтов
