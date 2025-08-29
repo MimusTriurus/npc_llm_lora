@@ -1,4 +1,0 @@
-version: "3.9"
-services:
-  trainer:
-    command: ["python", "train_qlora_qwen.py"]

@@ -7,9 +7,9 @@ WORKDIR /workspace
 COPY requirements.txt /workspace/requirements.txt
 RUN pip install -r requirements.txt
 
-COPY train_qlora_qwen.py /workspace/train_qlora_qwen.py
+COPY main.py /workspace/main.py
 
 ENV CUDA_VISIBLE_DEVICES=0
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python3", "train_qlora_qwen.py"]
+CMD ["python3", "main.py"]

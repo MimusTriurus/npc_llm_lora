@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   trainer:
-    build: .
+    build: ./0_train
     container_name: qwen-trainer
     tty: true
     stdin_open: true
@@ -22,10 +22,14 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - HF_HOME=/root/.cache/huggingface
       - HF_HUB_DISABLE_SYMLINKS_WARNING=1
+      - MODEL_NAME=models/Qwen2.5-1.5B-instruct
       - CUDA_VISIBLE_DEVICES=0   # если несколько карт — можно указать id
 
     volumes:
       - ./data:/workspace/data                              # датасет
-      - ./models:/root/.cache/huggingface/hub               # кэш HF моделей
-      - ./:/workspace                                       # код + скрипты
-      - ./outputs:/workspace/outputs                        # сохранение чекпоинтов
+      - ./models:/workspace/models           # кэш HF моделей
+      - ./outputs:/workspace/outputs                       # сохранение чекпоинтов
+
+    working_dir: /workspace
+
+    command: ["python", "main.py"]
