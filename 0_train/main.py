@@ -5,9 +5,6 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer, SFTConfig
 
-# -------------------------------
-# 1. Базовая модель + токенизатор
-# -------------------------------
 model_name = os.getenv('MODEL_NAME', "Qwen/Qwen2.5-1.5B")
 
 print(f'== Model name: {model_name}\n')
@@ -15,7 +12,6 @@ print(f'== Model name: {model_name}\n')
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 tokenizer.pad_token = tokenizer.eos_token
 
-# Квантование 4-bit (QLoRA)
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_use_double_quant=True,
@@ -29,9 +25,6 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
 )
 
-# -------------------------------
-# 2. LoRA адаптер
-# -------------------------------
 lora_config = LoraConfig(
     r=8,
     lora_alpha=16,
@@ -46,9 +39,6 @@ model.enable_input_require_grads()
 model.config.use_cache = False
 model.print_trainable_parameters()
 
-# -------------------------------
-# 3. Датасет
-# -------------------------------
 dataset = load_dataset("json", data_files={"0_train": "data/dataset.jsonl"})
 
 def format_example(example):
@@ -58,9 +48,6 @@ def format_example(example):
 
 dataset = dataset.map(format_example)
 
-# -------------------------------
-# 4. Конфиг обучения
-# -------------------------------
 sft_config = SFTConfig(
     output_dir="../outputs",
     per_device_train_batch_size=4,
@@ -81,9 +68,6 @@ sft_config = SFTConfig(
     report_to="none",
 )
 
-# -------------------------------
-# 5. Trainer
-# -------------------------------
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset["0_train"],
@@ -91,15 +75,8 @@ trainer = SFTTrainer(
     args=sft_config,
 )
 
-# -------------------------------
-# 6. Запуск обучения
-# -------------------------------
 trainer.train()
 
-# -------------------------------
-# 7. Сохраняем LoRA адаптер в формате,
-# совместимом с convert_lora_to_gguf.py
-# -------------------------------
 save_dir = "../outputs/final_adapter"
-model.save_pretrained(save_dir, safe_serialization=False)  # <--- ключ!
+model.save_pretrained(save_dir, safe_serialization=False)
 tokenizer.save_pretrained(save_dir)
