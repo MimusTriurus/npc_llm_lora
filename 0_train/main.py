@@ -6,10 +6,12 @@ from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer, SFTConfig
 
 model_name = os.getenv('MODEL_NAME', "Qwen/Qwen2.5-1.5B")
+model_path = f'models/{model_name}'
+print(f'== Model path: {model_path}\n')
+num_train_epoch = int(os.getenv('NUM_TRAIN_EPOCH', 3))
+print(f'== Number of training epoch: {num_train_epoch}\n')
 
-print(f'== Model name: {model_name}\n')
-
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.pad_token = tokenizer.eos_token
 
 bnb_config = BitsAndBytesConfig(
@@ -20,7 +22,7 @@ bnb_config = BitsAndBytesConfig(
 )
 
 model = AutoModelForCausalLM.from_pretrained(
-    model_name,
+    model_path,
     device_map="auto",
     quantization_config=bnb_config,
 )
@@ -49,13 +51,13 @@ def format_example(example):
 dataset = dataset.map(format_example)
 
 sft_config = SFTConfig(
-    output_dir="../outputs",
+    output_dir=f"outputs/{model_name}",
     per_device_train_batch_size=4,
     gradient_accumulation_steps=4,
     learning_rate=2e-4,
     lr_scheduler_type="cosine",
     warmup_ratio=0.05,
-    num_train_epochs=3,
+    num_train_epochs=num_train_epoch,
     logging_steps=5,
     save_strategy="epoch",
     save_total_limit=2,
@@ -77,6 +79,6 @@ trainer = SFTTrainer(
 
 trainer.train()
 
-save_dir = "../outputs/final_adapter"
+save_dir = f"outputs/{model_name}/final_adapter"
 model.save_pretrained(save_dir, safe_serialization=False)
 tokenizer.save_pretrained(save_dir)

@@ -1,41 +1,55 @@
 import os
+import os.path
 import subprocess
 import sys
 from pathlib import Path
 
-BASE_MODEL = os.getenv('BASE_MODEL', "models/Qwen2.5-1.5B-instruct")
-OUT_FORMAT = os.getenv('OUT_FORMAT', "q8_0")
-LORA_PATH = os.getenv('LORA_PATH', "outputs/final_adapter/")
-EXPORT_DIR = Path(os.getenv('EXPORT_DIR', "exported_models"))
-LLAMA_CPP_DIR = Path(os.getenv('LLAMA_CPP_DIR', "llama.cpp/"))
+BASE_MODEL = os.getenv('BASE_MODEL', 'Qwen2.5-1.5B-instruct')
+OUT_FORMAT = os.getenv('OUT_FORMAT', 'f16')
+LORA_PATH = f"outputs/{BASE_MODEL}/final_adapter/"
+OUT_BASE_MODEL_FILE = Path(f"exported_models/{BASE_MODEL}_{OUT_FORMAT}.gguf")
+OUT_LORA_ADAPTER_FILE = Path(f"exported_models/{BASE_MODEL}_LORA_{OUT_FORMAT}.gguf")
+LLAMA_CPP_DIR = Path(os.getenv('LLAMA_CPP_DIR', 'llama.cpp/'))
+LLAMA_BIN_DIR = Path(os.getenv('LLAMA_BIN_DIR', 'llama.cpp/bin'))
 sys.path.append(str(LLAMA_CPP_DIR))
 
-EXPORT_DIR.mkdir(exist_ok=True)
+converter_path = str(LLAMA_CPP_DIR / "convert_hf_to_gguf.py")
 
-print(f"===> Converting {BASE_MODEL} to the .gguf format")
-subprocess.run([
-    sys.executable, str(LLAMA_CPP_DIR / "convert_hf_to_gguf.py"),
-    BASE_MODEL,
-    "--outfile", str(EXPORT_DIR / "base_model.gguf"),
-    "--outtype", OUT_FORMAT
-], check=True)
+if os.path.isfile(converter_path):
+    print(f"===> Converting models/{BASE_MODEL} to the .gguf format")
+    subprocess.run([
+        sys.executable, str(LLAMA_CPP_DIR / "convert_hf_to_gguf.py"),
+        f'models/{BASE_MODEL}',
+        '--outfile', OUT_BASE_MODEL_FILE,
+        '--outtype', OUT_FORMAT
+    ], check=True)
 
-print(f"===> Converting a LoRA adapter to the .gguf format")
-subprocess.run([
-    sys.executable, str(LLAMA_CPP_DIR / "convert_lora_to_gguf.py"),
-    LORA_PATH,
-    "--outfile", str(EXPORT_DIR / "lora_adapter.gguf"),
-    "--outtype", OUT_FORMAT
-], check=True)
+    print(f"===> Converting a LoRA adapter to the .gguf format. {LORA_PATH}")
+    subprocess.run([
+        sys.executable, str(LLAMA_CPP_DIR / "convert_lora_to_gguf.py"),
+        LORA_PATH,
+        '--outfile', OUT_LORA_ADAPTER_FILE,
+        '--outtype', OUT_FORMAT,
+        '--base', f'models/{BASE_MODEL}'
+    ], check=True)
 
-print("\n Ready!")
-print(f"Base model: {EXPORT_DIR / 'base_model.gguf'}")
-print(f"LoRA adapter:  {EXPORT_DIR / 'lora_adapter.gguf'}")
+    print(f"Base model: {OUT_BASE_MODEL_FILE}")
+    print(f"LoRA adapter:  {OUT_LORA_ADAPTER_FILE}")
+else:
+    print(f"===> Error: can't find converter: {converter_path}")
 
-with open(EXPORT_DIR / "lora_adapter.gguf", 'w') as f:
-    f.writelines(
-        [
-            BASE_MODEL,
-            OUT_FORMAT,
-        ]
-    )
+print(f"===> Quantization q4_k_m for. {OUT_BASE_MODEL_FILE}")
+
+quatizator_path = str(LLAMA_BIN_DIR / "llama-quantize.exe")
+
+if os.path.isfile(quatizator_path):
+    subprocess.run([
+        quatizator_path,
+        OUT_BASE_MODEL_FILE,
+        f"exported_models/{BASE_MODEL}_q4_k_m.gguf",
+        'q4_k_m'
+    ], check=True)
+else:
+    print(f"===> Error: can't find quantizator: {quatizator_path}")
+
+print('\n Ready!')

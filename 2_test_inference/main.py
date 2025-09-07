@@ -1,7 +1,8 @@
 from llama_cpp import Llama
+import os
 
-model_path = "exported_models/qwen-1.5b.gguf"
-lora_path = "exported_models/npc_adapter.gguf"
+model_path = f"exported_models/{os.getenv('MODEL_NAME', 'Qwen3-1.7B_q4_k_m.gguf')}"
+lora_path = f"exported_models/{os.getenv('LORA_NAME', 'Qwen3-1.7B_LORA_f16.gguf')}"
 
 llm = Llama(
     model_path=model_path,

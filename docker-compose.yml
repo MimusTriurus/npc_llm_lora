@@ -8,7 +8,6 @@ services:
     stdin_open: true
     shm_size: "16gb"
 
-    # Доступ к GPU
     deploy:
       resources:
         reservations:
@@ -17,18 +16,18 @@ services:
               count: all
               capabilities: [gpu]
 
-    # Переменные окружения для Hugging Face и CUDA
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - HF_HOME=/root/.cache/huggingface
       - HF_HUB_DISABLE_SYMLINKS_WARNING=1
-      - MODEL_NAME=models/Qwen2.5-1.5B-instruct
-      - CUDA_VISIBLE_DEVICES=0   # если несколько карт — можно указать id
+      - MODEL_NAME=Qwen3-4B-Thinking-2507
+      - CUDA_VISIBLE_DEVICES=0
+      - NUM_TRAIN_EPOCH=8
 
     volumes:
-      - ./data:/workspace/data                              # датасет
-      - ./models:/workspace/models           # кэш HF моделей
-      - ./outputs:/workspace/outputs                       # сохранение чекпоинтов
+      - ./data:/workspace/data
+      - ./models:/workspace/models
+      - ./outputs:/workspace/outputs
 
     working_dir: /workspace
 
