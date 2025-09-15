@@ -7,7 +7,9 @@ from trl import SFTTrainer, SFTConfig
 
 model_name = os.getenv('MODEL_NAME', "Qwen/Qwen2.5-1.5B")
 model_path = f'models/{model_name}'
+dataset_file_name = os.getenv('DATASET_FILE_NAME', "dataset.jsonl")
 print(f'== Model path: {model_path}\n')
+print(f'== Dataset: {dataset_file_name}\n')
 num_train_epoch = int(os.getenv('NUM_TRAIN_EPOCH', 3))
 print(f'== Number of training epoch: {num_train_epoch}\n')
 
@@ -41,7 +43,7 @@ model.enable_input_require_grads()
 model.config.use_cache = False
 model.print_trainable_parameters()
 
-dataset = load_dataset("json", data_files={"0_train": "data/dataset.jsonl"})
+dataset = load_dataset("json", data_files={"0_train": f"data/{dataset_file_name}"})
 
 def format_example(example):
     return {
