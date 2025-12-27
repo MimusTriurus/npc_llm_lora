@@ -1,17 +1,23 @@
 import torch
 import os
 from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, EarlyStoppingCallback
 from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer, SFTConfig
 
-model_name = os.getenv('MODEL_NAME', "Qwen/Qwen2.5-1.5B")
+model_name = os.getenv('MODEL_NAME', "Qwen3-4B-Instruct-2507")
 model_path = f'models/{model_name}'
-dataset_file_name = os.getenv('DATASET_FILE_NAME', "dataset.jsonl")
+dataset_file_name = os.getenv('DATASET_FILE_NAME', "training_dataset.jsonl")
+validation_dataset_file_name = os.getenv('VALIDATION_DATASET_FILE_NAME', "validation_dataset.jsonl")
 print(f'== Model path: {model_path}\n')
 print(f'== Dataset: {dataset_file_name}\n')
-num_train_epoch = int(os.getenv('NUM_TRAIN_EPOCH', 3))
+num_train_epoch = int(os.getenv('NUM_TRAIN_EPOCH', 1))
 print(f'== Number of training epoch: {num_train_epoch}\n')
+
+early_stopping_callback = EarlyStoppingCallback(
+    early_stopping_patience=2,
+    early_stopping_threshold=0.0
+)
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.pad_token = tokenizer.eos_token
@@ -20,13 +26,14 @@ bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_use_double_quant=True,
     bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_compute_dtype=torch.float16,
 )
 
 model = AutoModelForCausalLM.from_pretrained(
     model_path,
     device_map="auto",
     quantization_config=bnb_config,
+    torch_dtype=torch.float16,
 )
 
 lora_config = LoraConfig(
@@ -43,14 +50,29 @@ model.enable_input_require_grads()
 model.config.use_cache = False
 model.print_trainable_parameters()
 
-dataset = load_dataset("json", data_files={"0_train": f"data/{dataset_file_name}"})
+dataset = load_dataset(
+    "json",
+    data_files={
+        "train": f"data/{dataset_file_name}",
+        "validation": f"data/{validation_dataset_file_name}",
+    }
+)
 
 def format_example(example):
-    return {
-        "text": f"Instruction: {example['instruction']}\nAnswer: {example['output']}"
-    }
+    messages = example["messages"]
 
-dataset = dataset.map(format_example)
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=False,
+    )
+
+    return {"text": text}
+
+dataset = dataset.map(
+    format_example,
+    remove_columns=dataset["train"].column_names,
+)
 
 sft_config = SFTConfig(
     output_dir=f"outputs/{model_name}",
@@ -63,20 +85,24 @@ sft_config = SFTConfig(
     logging_steps=5,
     save_strategy="epoch",
     save_total_limit=2,
-    bf16=True,
+    fp16=False,
+    bf16=False,
+    half_precision_backend="no",
     gradient_checkpointing=True,
     optim="paged_adamw_32bit",
-    max_seq_length=512,
-    packing=True,
+    max_length=1024,
+    packing=False,
     dataset_text_field="text",
     report_to="none",
+    eval_steps=200,
 )
 
 trainer = SFTTrainer(
     model=model,
-    train_dataset=dataset["0_train"],
-    tokenizer=tokenizer,
+    train_dataset=dataset["train"],
+    #eval_dataset=dataset["validation"],
     args=sft_config,
+    #callbacks=[early_stopping_callback]
 )
 
 trainer.train()

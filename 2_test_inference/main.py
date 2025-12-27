@@ -1,8 +1,8 @@
 from llama_cpp import Llama
 import os
 
-model_path = f"exported_models/{os.getenv('MODEL_NAME', 'Qwen3-1.7B_q4_k_m.gguf')}"
-lora_path = f"exported_models/{os.getenv('LORA_NAME', 'Qwen3-1.7B_LORA_f16.gguf')}"
+model_path = f"exported_models/{os.getenv('MODEL_NAME', 'Qwen3-4B-Instruct-2507_q4_k_m.gguf')}"
+lora_path = f"exported_models/{os.getenv('LORA_NAME', 'Qwen3-4B-Instruct-2507_LORA_f16.gguf')}"
 
 llm = Llama(
     model_path=model_path,
@@ -69,7 +69,7 @@ for i, user_prompt in enumerate(queries, 1):
 
     print(f"user: {user_prompt}")
     print(f"npc: {text}\n")
-
+#exit()
 print(f'\n==> LLM with LoRA')
 for i, user_prompt in enumerate(queries, 1):
     full_prompt = system_prompt + f"\nuser: {user_prompt}\nassistant:"

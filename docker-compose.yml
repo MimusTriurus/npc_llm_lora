@@ -20,10 +20,11 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - HF_HOME=/root/.cache/huggingface
       - HF_HUB_DISABLE_SYMLINKS_WARNING=1
-      - MODEL_NAME=Qwen3-4B-Thinking-2507
+      - MODEL_NAME=Qwen3-4B-Instruct-2507
       - CUDA_VISIBLE_DEVICES=0
-      - NUM_TRAIN_EPOCH=8
-
+      - NUM_TRAIN_EPOCH=1
+      - DATASET_FILE_NAME=4_training_dataset.jsonl
+      - VALIDATION_DATASET_FILE_NAME=4_validation_dataset.jsonl
     volumes:
       - ./data:/workspace/data
       - ./models:/workspace/models

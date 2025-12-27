@@ -1,7 +1,7 @@
 1. Установи зависимости:
    pip install -r requirements.txt
    (для torch используй колёсико с сайта PyTorch под CUDA 12.1)
-   pip install torch==2.3.0+cu121 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+   pip install torch==2.5.1+cu128 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 2. Запусти обучение:
    python train_qlora_qwen.py
