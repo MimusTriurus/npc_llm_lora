@@ -47,7 +47,7 @@ lora_config = LoraConfig(
     lora_alpha=64,
     target_modules=[
         "q_proj", "k_proj", "v_proj", "o_proj",
-        "gate_proj", "up_proj", "down_proj", # MLP слои - критичны для логики
+        "gate_proj", "up_proj", "down_proj",
     ],
     lora_dropout=0.05,
     bias="none",
@@ -63,7 +63,7 @@ dataset = load_dataset(
     "json",
     data_files={
         "train": f"data/{dataset_file_name}",
-        "validation": f"data/{validation_dataset_file_name}",
+        #"validation": f"data/{validation_dataset_file_name}", # на "потом"
     }
 )
 
@@ -95,7 +95,7 @@ def analyze_token_lengths():
 max_size = analyze_token_lengths()
 max_size = max(max_size, 1024)
 
-print(f'==> SFTConfig. max_len: {max_size}')
+print(f'==> SFTConfig. max_seq_length: {max_size}')
 
 response_template = "<|im_start|>assistant\n"
 collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
@@ -126,7 +126,7 @@ sft_config = SFTConfig(
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset["train"],
-    #eval_dataset=dataset["validation"],
+    #eval_dataset=dataset["validation"],  # на "потом"
     data_collator=collator,
     args=sft_config,
 )
