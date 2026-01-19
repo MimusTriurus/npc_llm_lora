@@ -208,17 +208,19 @@ emotions = [
     "Sad",
     "Surprise"
 ]
-# D:\Projects\Python\ai_npc_lora_dataset_gen\resources\npc_trader\output
+
 if __name__ == "__main__":
     # region ENV vars
-    llama_repo_path = os.getenv('LLAMA_REPO', r'D:/Projects/C++/llama.cpp/')
-    models_dir = os.getenv("MODELS_DIR", 'D:/Projects/Python/npc_llm_lora/exported_models')
-    base_model = os.getenv("BASE_MODEL", 'Qwen3-4B-Instruct-2507_q4_k_m')
-    emb_model = os.getenv("EMB_MODEL", 'bge-base-en-v1.5-f16')
-    npc_name = os.getenv("NPC_NAME", 'npc_re4_trader')
+    dll_dir = os.getenv('ULLAMA_LIB_PATH', '../llama.cpp/cmake-build-release-visual-studio/bin')
+    llama_repo_path = os.getenv('LLAMA_REPO', '../llama.cpp/')
+    models_dir = os.getenv('MODELS_DIR', 'exported_models')
+    base_model = os.getenv('BASE_MODEL', 'Qwen3-4B-Instruct-2507_q4_k_m')
+    emb_model = os.getenv('EMB_MODEL', 'bge-base-en-v1.5-f16')
+    npc_name = os.getenv('NPC_NAME', 'npc_re4_trader')
     lora_adapter = os.getenv('LORA_ADAPTER', '')
-    requests_count = int(os.getenv("REQUESTS_COUNT", '10'))
-    use_thinking = os.getenv("USE_THINKING", "false").lower() in ("1", "true", "yes", "on")
+    requests_count = int(os.getenv('REQUESTS_COUNT', 10))
+    use_thinking = os.getenv('USE_THINKING', 'false').lower() in ("1", "true", "yes", "on")
+    system_prompt_f_path = os.getenv('SYSTEM_PROMPT_F_PATH', llama_repo_path)
 
     dataset_repo_dir_path = os.getenv("DATASET_REPO_DIR", '')
     validation_dataset_path = f'{dataset_repo_dir_path}\\resources\\{npc_name}\\output\\{os.getenv("VALIDATION_DATASET_PATH", "")}'
@@ -230,7 +232,6 @@ if __name__ == "__main__":
 
     dataset_files = list_files(validation_dataset_path)
 
-    dll_dir = fr'{llama_repo_path}/cmake-build-release-visual-studio/bin'
     dll_name = r"ullama.dll"
 
     resources_dir = fr'{llama_repo_path}/examples/ullama/resources'
@@ -245,7 +246,7 @@ if __name__ == "__main__":
     ullm_config['lora_adapter'] = lora_path
     ullm_config['system_prompt'] = make_system_prompt(
         f'{dataset_repo_dir_path}',
-        'systemPrompt.md',
+        f'{npc_name}/{system_prompt_f_path}.md',
         npc_name,
         'user_description.md'
     )
@@ -295,7 +296,13 @@ if __name__ == "__main__":
                         if api.lib.ullama_worker_getToken(worker, token_buf, 512):
                             response += token_buf.value.decode('utf-8')
 
-                    think_block, response_dict = split_think_and_json(response)
+                    think_block = None
+                    response_dict = {}
+                    try:
+                        think_block, response_dict = split_think_and_json(response)
+                    except Exception as e:
+                        print(e)
+                        continue
 
                     if response_dict is None:
                         json_parse_fails += 1
@@ -319,22 +326,13 @@ if __name__ == "__main__":
                     if action_name != valid_action_name:
                         total_fails += 1
                         action_fails[file_name] += 1
-                        #print('\n')
                         print(f'==> Error! Wrong action!\n Valid: {valid_action_name}\n Current: {action_name}')
-                        #print(request)
-                        #print(response)
-                        #print('\n')
                         continue
 
                     if action_args != valid_action_args:
                         total_fails += 1
                         args_fails[file_name] += 1
-                        #print('\n')
                         print(f'==> Error! Wrong action args!\n Valid: {valid_action_args}\n Current: {action_args}')
-                        #print(request)
-                        #print(response)
-                        #print('\n')
-
             print('')
             print('--- RESULTS ---')
             print(f'=== Json parse fails: {json_parse_fails}/{total_requests} ===')
